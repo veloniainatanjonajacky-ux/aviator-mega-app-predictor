@@ -74,27 +74,18 @@ st.markdown("""
     .rose-vip { border-color: #E91E63; }
     .auto-2x { border-color: #4CAF50; }
     .guide { border-color: #2196F3; background: linear-gradient(135deg, #E3F2FD, #BBDEFB); }
-    .gemini { 
-        border-color: #4285F4; 
-        background: linear-gradient(135deg, #fff, #e8f0fe);
-    }
+    .gemini { border-color: #4285F4; background: linear-gradient(135deg, #fff, #e8f0fe); }
     
     .gemini-header {
         background: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335);
-        background-size: 300% 300%;
-        animation: gradient 3s ease infinite;
         padding: 20px;
         border-radius: 15px;
         text-align: center;
         color: white !important;
         margin-bottom: 15px;
     }
-    @keyframes gradient {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
     .gemini-header h2 { color: white !important; margin: 0; }
+    .gemini-header p { color: white !important; }
     
     .data-counter {
         background: #4285F4;
@@ -118,6 +109,46 @@ st.markdown("""
     .next-pred h1 { color: white !important; font-size: 50px; margin: 10px 0; }
     .next-pred p { color: white !important; }
     
+    .step-1 {
+        background: linear-gradient(135deg, #4285F4, #1976D2);
+        padding: 15px;
+        border-radius: 10px;
+        color: white !important;
+        margin-bottom: 15px;
+    }
+    .step-1 h3 { color: white !important; margin: 0; }
+    .step-1 p { color: white !important; margin: 5px 0; }
+    
+    .step-2 {
+        background: linear-gradient(135deg, #FBBC05, #F57C00);
+        padding: 15px;
+        border-radius: 10px;
+        color: white !important;
+        margin-bottom: 15px;
+    }
+    .step-2 h3 { color: white !important; margin: 0; }
+    .step-2 p { color: white !important; margin: 5px 0; }
+    
+    .step-3 {
+        background: linear-gradient(135deg, #34A853, #2E7D32);
+        padding: 15px;
+        border-radius: 10px;
+        color: white !important;
+        margin-bottom: 15px;
+    }
+    .step-3 h3 { color: white !important; margin: 0; }
+    .step-3 p { color: white !important; margin: 5px 0; }
+    
+    .step-4 {
+        background: linear-gradient(135deg, #EA4335, #C62828);
+        padding: 15px;
+        border-radius: 10px;
+        color: white !important;
+        margin-bottom: 15px;
+    }
+    .step-4 h3 { color: white !important; margin: 0; }
+    .step-4 p { color: white !important; margin: 5px 0; }
+    
     .stButton>button {
         background: linear-gradient(135deg, #00C853, #009624);
         color: white !important;
@@ -127,14 +158,6 @@ st.markdown("""
         font-weight: bold;
         width: 100%;
         font-size: 16px;
-    }
-    
-    .gemini-btn button {
-        background: linear-gradient(135deg, #4285F4, #34A853) !important;
-    }
-    
-    .add-btn button {
-        background: linear-gradient(135deg, #FBBC05, #EA4335) !important;
     }
     
     .zone-bleue { background: #e3f2fd; border-left: 5px solid #2196F3; padding: 15px; border-radius: 10px; margin: 10px 0; color: #0d47a1 !important; }
@@ -150,18 +173,6 @@ st.markdown("""
     .pred-ia b, .pred-ia span { color: white !important; }
     .pred-rose { background: linear-gradient(135deg, #fce4ec, #f8bbd0); padding: 20px; border-radius: 12px; margin: 10px 0; border-left: 6px solid #E91E63; color: #880E4F !important; }
     .pred-rose b { color: #880E4F !important; }
-    .pred-auto { background: #e8f5e9; padding: 12px; border-radius: 8px; margin: 5px 0; border-left: 4px solid #4CAF50; color: #1B5E20 !important; }
-    .pred-auto b { color: #1B5E20 !important; }
-    
-    .history-item {
-        background: white;
-        padding: 10px;
-        border-radius: 8px;
-        margin: 5px 0;
-        display: flex;
-        justify-content: space-between;
-        border-left: 4px solid;
-    }
     
     .stNumberInput label, .stTextArea label, .stSlider label {
         color: #1a1a1a !important;
@@ -182,6 +193,7 @@ if "gemini_predictions" not in st.session_state:
 if "gemini_history_predictions" not in st.session_state:
     st.session_state.gemini_history_predictions = []
 
+# HEADER
 st.markdown("""
 <div class="main-header">
     <h1>🎰 Bet261 Predictor V1.6.0 (Beta)</h1>
@@ -197,6 +209,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# FUNCTIONS
 def calc_fiabilite_v16(round_num, base_data=None):
     base = 95 - (round_num - 1) * 3
     if base_data is not None and len(base_data) > 0:
@@ -214,7 +227,6 @@ def predict_bet261_aviator(history, num_predictions=10):
     if len(history) == 0:
         return []
     predictions = []
-    avg = np.mean(history)
     rounds_since_big = 0
     for x in reversed(history):
         if x >= 10:
@@ -249,35 +261,26 @@ def predict_bet261_aviator(history, num_predictions=10):
     return predictions
 
 def predict_gemini_next(history):
-    """
-    Algorithme IA Gemini - Predict next single round
-    Combine: Random Forest + Gradient Boosting + Pattern Analysis
-    """
     if len(history) < 5:
         return None, 0, "Mila data 5 farafahakeliny"
     
     data = np.array(history)
     
-    # 1. Random Forest
     X = np.arange(len(data)).reshape(-1, 1)
     rf = RandomForestRegressor(n_estimators=300, random_state=42)
     rf.fit(X, data)
     pred_rf = rf.predict([[len(data)]])[0]
     
-    # 2. Gradient Boosting
     gb = GradientBoostingRegressor(n_estimators=200, random_state=42)
     gb.fit(X, data)
     pred_gb = gb.predict([[len(data)]])[0]
     
-    # 3. Pattern Analysis Bet261
     last_5 = data[-5:]
     last_10 = data[-10:] if len(data) >= 10 else data
-    
     avg_5 = np.mean(last_5)
     avg_10 = np.mean(last_10)
     std_5 = np.std(last_5)
     
-    # Compteur de rounds bas consécutifs
     consecutive_lows = 0
     for x in reversed(data):
         if x < 2.0:
@@ -285,37 +288,29 @@ def predict_gemini_next(history):
         else:
             break
     
-    # Compteur de rounds depuis dernier big win
     rounds_since_big = 0
     for x in reversed(data):
         if x >= 10:
             break
         rounds_since_big += 1
     
-    # Combinaison intelligente (Gemini-style)
     base_pred = (pred_rf * 0.4 + pred_gb * 0.4 + avg_10 * 0.2)
     
-    # Adjustements Bet261
     if consecutive_lows >= 4:
-        # Apres 4+ bas, augmentation de probabilité de hausse
         base_pred *= 1.3
         confidence = 82
     elif rounds_since_big >= 18:
-        # Big win prochain
         base_pred *= 1.5
         confidence = 78
     elif avg_5 > 3.0:
-        # Trop haut, descente prochaine
         base_pred *= 0.7
         confidence = 75
     else:
         confidence = max(70, 95 - int(std_5 * 10))
     
-    # Variation aléatoire
     base_pred += np.random.uniform(-0.5, 0.8)
     final_pred = max(1.0, min(50.0, base_pred))
     
-    # Analyse de la zone
     if final_pred < 1.5:
         zone = "🔴 Zone Rouge (RISIKA)"
         zone_color = "#F44336"
@@ -332,7 +327,14 @@ def predict_gemini_next(history):
         zone = "💎 Zone Rose (BIG WIN!)"
         zone_color = "#E91E63"
     
-    return round(final_pred, 2), round(confidence, 1), {"zone": zone, "color": zone_color, "consecutive_lows": consecutive_lows, "rounds_since_big": rounds_since_big}
+    info = {
+        "zone": zone,
+        "color": zone_color,
+        "consecutive_lows": consecutive_lows,
+        "rounds_since_big": rounds_since_big
+    }
+    
+    return round(final_pred, 2), round(confidence, 1), info
 
 # ===== MENU =====
 if st.session_state.page == "menu":
@@ -348,7 +350,6 @@ if st.session_state.page == "menu":
         st.session_state.page = "guide"
         st.rerun()
     
-    # GEMINI - NOUVEAU
     st.markdown("""
     <div class="strategy-card gemini">
         <h3>🤖 Stratégie IA Gemini ⭐ NOUVEAU</h3>
@@ -356,11 +357,9 @@ if st.session_state.page == "menu":
         <p style="font-style: italic;">L'IA apprend à chaque tour. Précision maximale!</p>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown('<div class="gemini-btn">', unsafe_allow_html=True)
     if st.button("🤖 Ouvrir Stratégie IA Gemini", key="b_gemini"):
         st.session_state.page = "gemini"
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("""
     <div class="strategy-card violette">
@@ -426,128 +425,91 @@ elif st.session_state.page == "gemini":
     st.markdown("""
     <div class="gemini-header">
         <h2>🤖 STRATÉGIE IA GEMINI</h2>
-        <p style="color: white !important; margin: 5px 0;">Continuous Learning AI • Tour Par Tour</p>
+        <p>Continuous Learning AI • Tour Par Tour</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Data Counter
-    data_count = len(st.session_state.gemini_data)
-    st.markdown(f"""
-    <div class="data-counter">
-        📊 Data tafiditra: <b>{data_count}</b> multiplicateurs
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # ===== PREMIÈRE ANALYSE =====
+    # DINGANA 1: HISTORIQUE 20 VOALOHANY
     if not st.session_state.gemini_initialized:
-        st.markdown("### 📥 DINGANA 1: Analyse Voalohany")
-        st.info("📌 Ampidiro ny **multiplicateur 10 hatramin'ny 20** farany nivoaka tao amin'ny Aviator (atokana 'ny faingo `,`)")
+        st.markdown("""
+        <div class="step-1">
+            <h3>📥 DINGANA 1: Historique 20 voalohany</h3>
+            <p>Ampidiro ny multiplicateur 20 farany nivoaka tao amin'ny Aviator.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.info("📌 Ohatra: 1.5, 2.3, 1.1, 5.6, 1.8, 2.5, 1.3, 1.9, 3.2, 1.4, 2.1, 1.6, 4.5, 1.7, 2.8, 1.2, 3.5, 1.9, 2.4, 1.5")
         
         initial_data = st.text_area(
-            "Multiplicateurs initiaux (10-20):",
-            value="1.5, 2.3, 1.1, 5.6, 1.8, 2.5, 1.3, 1.9, 3.2, 1.4",
-            height=100,
-            help="Ohatra: 1.5, 2.3, 1.1, 5.6, 1.8, 2.5, 1.3, 1.9, 3.2, 1.4"
+            "✏️ Soraty eto ny multiplicateurs 20 voalohany (atokana faingo):",
+            value="",
+            height=120,
+            placeholder="1.5, 2.3, 1.1, 5.6, 1.8, ...",
+            key="initial_input"
         )
         
-        if st.button("🚀 Manomboka ny IA Gemini", key="init_gemini"):
+        if st.button("✅ Tehirizo ny Historique 20", key="init_gemini"):
             try:
                 data = [float(x.strip()) for x in initial_data.split(",") if x.strip()]
                 
-                if len(data) < 5:
-                    st.error("❌ Mila farafahakeliny 5 multiplicateurs!")
+                if len(data) < 10:
+                    st.error(f"❌ Mila farafahakeliny 10 multiplicateurs! Izao misy: {len(data)}")
                 elif len(data) > 20:
-                    st.warning(f"⚠️ Be loatra ({len(data)}). Mampiasà ny 20 farany ihany.")
-                    data = data[-20:]
-                    st.session_state.gemini_data = data
+                    st.warning(f"⚠️ Be loatra ({len(data)}). Ny 20 farany ihany no horaisina.")
+                    st.session_state.gemini_data = data[-20:]
                     st.session_state.gemini_initialized = True
                     st.rerun()
                 else:
                     st.session_state.gemini_data = data
                     st.session_state.gemini_initialized = True
-                    st.success(f"✅ IA Gemini vonona! Data {len(data)} voatahiry.")
+                    st.success(f"✅ Voatahiry tsara ny {len(data)} multiplicateurs!")
                     st.rerun()
             except Exception as e:
-                st.error(f"Format diso: {e}")
+                st.error(f"❌ Format diso. Ohatra: 1.5, 2.3, 1.1...")
     
-    # ===== MODE CONTINU =====
+    # MODE CONTINU
     else:
-        st.markdown("### 🤖 MODE CONTINU - Manampia 1 isaky ny tour")
+        data_count = len(st.session_state.gemini_data)
         
-        # Affichage des derniers data
-        with st.expander(f"📜 Hijery ny data {data_count} (5 farany)"):
-            last_data = st.session_state.gemini_data[-5:]
-            for i, m in enumerate(last_data, 1):
-                color = "#F44336" if m < 2 else ("#FFC107" if m < 5 else ("#4CAF50" if m < 10 else "#E91E63"))
+        st.markdown(f"""
+        <div class="data-counter">
+            📊 Data tafiditra: <b>{data_count}</b> multiplicateurs
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Hijery ny historique
+        with st.expander(f"📜 Hijery ny Historique ({data_count} multiplicateurs)"):
+            df_hist = pd.DataFrame({
+                "N°": range(1, len(st.session_state.gemini_data) + 1),
+                "Multiplicateur": [f"{m:.2f}X" for m in st.session_state.gemini_data],
+                "Zone": ["🔴 Mena" if m < 2 else ("🟢 Maitso" if m < 10 else "💎 Big Win") 
+                         for m in st.session_state.gemini_data]
+            })
+            st.dataframe(df_hist, use_container_width=True, height=300)
+        
+        # 10 farany
+        st.markdown("**🔍 10 farany nivoaka:**")
+        last_10 = st.session_state.gemini_data[-10:]
+        cols = st.columns(5)
+        for i, m in enumerate(last_10):
+            color = "#F44336" if m < 2 else ("#FFC107" if m < 5 else ("#4CAF50" if m < 10 else "#E91E63"))
+            with cols[i % 5]:
                 st.markdown(f'''
-                <div class="history-item" style="border-left-color: {color};">
-                    <span><b>#{data_count - 5 + i}</b></span>
-                    <span style="color: {color}; font-weight: bold;">{m}X</span>
+                <div style="background: {color}; color: white; padding: 8px; border-radius: 8px; 
+                            text-align: center; margin: 3px 0; font-weight: bold;">
+                    {m:.2f}X
                 </div>
                 ''', unsafe_allow_html=True)
         
-        # PREDICTION POUR LE PROCHAIN TOUR
-        st.markdown("### 🎯 VINAVINA HO AN'NY TOUR MANARAKA")
-        
-        if st.button("🤖 Maminavina ny Tour Manaraka (IA Gemini)", key="predict_next"):
-            with st.spinner("🧠 IA Gemini mikajy..."):
-                pred, conf, info = predict_gemini_next(st.session_state.gemini_data)
-                
-                if pred is None:
-                    st.error(info)
-                else:
-                    st.session_state.gemini_predictions = [pred, conf, info]
-                    next_time = mada_now + timedelta(seconds=bet261_round_duration())
-                    
-                    st.markdown(f"""
-                    <div class="next-pred">
-                        <p style="font-size: 16px;">🎯 PROCHAIN TOUR PRÉDIT</p>
-                        <h1>{pred}X</h1>
-                        <p>⏰ Ora: <b>{next_time.strftime('%H:%M:%S')} 🇲🇬</b></p>
-                        <p>✅ Fiabilité: <b>{conf}%</b></p>
-                        <p style="background: {info['color']}; padding: 10px; border-radius: 8px; margin-top: 10px;">
-                            {info['zone']}
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Analyse complémentaire
-                    st.markdown(f"""
-                    ### 📊 Analyse IA Gemini:
-                    - 🔴 Loka ambany nifanesy: **{info['consecutive_lows']}**
-                    - 💎 Loka taty aoriana tsy nisy Big Win: **{info['rounds_since_big']}**
-                    - 💰 Cash Out atolotra: **{pred * 0.85:.2f}X**
-                    - 🎯 Strategy: **{"Milokà" if conf >= 75 else "Mihalava"}**
-                    """)
-                    
-                    # Sauvegarder la prédiction
-                    st.session_state.gemini_history_predictions.append({
-                        "time": next_time.strftime('%H:%M:%S'),
-                        "prediction": pred,
-                        "confidence": conf
-                    })
-        
-        # Afficher la dernière prédiction si existe
-        elif len(st.session_state.gemini_predictions) > 0:
-            pred, conf, info = st.session_state.gemini_predictions
-            next_time = mada_now + timedelta(seconds=bet261_round_duration())
-            st.markdown(f"""
-            <div class="next-pred">
-                <p style="font-size: 16px;">🎯 DERNIÈRE PRÉDICTION</p>
-                <h1>{pred}X</h1>
-                <p>⏰ Ora: <b>{next_time.strftime('%H:%M:%S')} 🇲🇬</b></p>
-                <p>✅ Fiabilité: <b>{conf}%</b></p>
-                <p style="background: {info['color']}; padding: 10px; border-radius: 8px; margin-top: 10px;">
-                    {info['zone']}
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-        
         st.markdown("---")
         
-        # AJOUTER NOUVEAU MULTIPLICATEUR
-        st.markdown("### ➕ DINGANA MANARAKA: Manampia ny vokatra farany")
-        st.info("📌 Aorian'ny tour vita, soraty eto ny multiplicateur tena nivoaka.")
+        # DINGANA 2: MANAMPIA 1 MULTIPLICATEUR
+        st.markdown("""
+        <div class="step-2">
+            <h3>➕ DINGANA 2: Manampia 1 multiplicateur farany</h3>
+            <p>Soraty eto ny multiplicateur farany nivoaka.</p>
+        </div>
+        """, unsafe_allow_html=True)
         
         col1, col2 = st.columns([2, 1])
         with col1:
@@ -562,34 +524,139 @@ elif st.session_state.page == "gemini":
         with col2:
             st.write("")
             st.write("")
-            st.markdown('<div class="add-btn">', unsafe_allow_html=True)
             if st.button("➕ Ampidiro", key="add_mult"):
                 st.session_state.gemini_data.append(new_mult)
-                # Conserver les 30 derniers seulement pour performance
                 if len(st.session_state.gemini_data) > 30:
                     st.session_state.gemini_data = st.session_state.gemini_data[-30:]
+                st.session_state.gemini_predictions = []
                 st.success(f"✅ {new_mult}X voatahiry!")
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
         
-        # Vérification de précision (si on a des prédictions précédentes)
-        if len(st.session_state.gemini_history_predictions) > 0 and len(st.session_state.gemini_data) > 10:
-            st.markdown("### 📈 Précision de l'IA Gemini")
+        st.markdown("---")
+        
+        # DINGANA 3: ANALYSE + PREDICTION
+        st.markdown("""
+        <div class="step-3">
+            <h3>🤖 DINGANA 3: Analyse + Vinavina</h3>
+            <p>Tsindrio mba hahazoanao vinavina ny tour manaraka.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🚀 MAMINAVINA NY TOUR MANARAKA", key="predict_next", use_container_width=True):
+            with st.spinner("🧠 IA Gemini mikajy..."):
+                pred, conf, info = predict_gemini_next(st.session_state.gemini_data)
+                
+                if pred is None:
+                    st.error(info)
+                else:
+                    st.session_state.gemini_predictions = [pred, conf, info]
+                    st.session_state.gemini_history_predictions.append({
+                        "prediction": pred,
+                        "confidence": conf,
+                        "based_on": len(st.session_state.gemini_data)
+                    })
+                    st.rerun()
+        
+        # Affichage de la prédiction
+        if len(st.session_state.gemini_predictions) > 0:
+            pred, conf, info = st.session_state.gemini_predictions
+            next_time = mada_now + timedelta(seconds=bet261_round_duration())
+            
+            st.markdown(f"""
+            <div class="next-pred">
+                <p style="font-size: 16px;">🎯 VINAVINA NY TOUR MANARAKA</p>
+                <h1>{pred}X</h1>
+                <p>⏰ Ora vinavinaina: <b>{next_time.strftime('%H:%M:%S')} 🇲🇬</b></p>
+                <p>✅ Fiabilité: <b>{conf}%</b></p>
+                <p style="background: {info['color']}; padding: 10px; border-radius: 8px; margin-top: 10px;">
+                    {info['zone']}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("🔴 Loka ambany nifanesy", info['consecutive_lows'])
+                st.metric("💰 Cash Out atolotra", f"{pred * 0.85:.2f}X")
+            with col2:
+                st.metric("💎 Tsy nisy Big Win", f"{info['rounds_since_big']} loka")
+                strategy = "✅ Milokà" if conf >= 75 else ("⚠️ Mihalava" if conf >= 60 else "❌ Aza milokà")
+                st.metric("🎯 Strategy", strategy)
+            
+            if conf >= 80:
+                st.success(f"✅ TENA TSARA! Milokà. Cash Out: {pred * 0.85:.2f}X")
+            elif conf >= 70:
+                st.warning(f"⚠️ ANTONONY. Milokà kely. Cash Out: {pred * 0.85:.2f}X")
+            else:
+                st.error("❌ MAMETRA. Aleo aloha tsy milokà.")
+            
+            # DINGANA 4
+            st.markdown("---")
+            st.markdown("""
+            <div class="step-4">
+                <h3>🔄 DINGANA 4: Aorian'ny tour</h3>
+                <p>Soraty ny multiplicateur tena nivoaka, dia maminavina indray.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                actual_mult = st.number_input(
+                    "Multiplicateur tena nivoaka:", 
+                    min_value=1.00, 
+                    max_value=1000.00, 
+                    value=1.50, 
+                    step=0.01,
+                    key="actual_mult"
+                )
+            with col2:
+                st.write("")
+                st.write("")
+                if st.button("➕ Ampio + Maminavina", key="add_and_predict"):
+                    st.session_state.gemini_data.append(actual_mult)
+                    if len(st.session_state.gemini_data) > 30:
+                        st.session_state.gemini_data = st.session_state.gemini_data[-30:]
+                    
+                    diff = abs(pred - actual_mult)
+                    if diff < 0.5:
+                        st.success(f"🎯 Marina! Vinavina: {pred:.2f}X • Tena: {actual_mult}X")
+                    else:
+                        st.warning(f"📊 Vinavina: {pred:.2f}X • Tena: {actual_mult}X")
+                    
+                    pred_new, conf_new, info_new = predict_gemini_next(st.session_state.gemini_data)
+                    if pred_new is not None:
+                        st.session_state.gemini_predictions = [pred_new, conf_new, info_new]
+                        st.session_state.gemini_history_predictions.append({
+                            "prediction": pred_new,
+                            "confidence": conf_new,
+                            "based_on": len(st.session_state.gemini_data)
+                        })
+                    
+                    st.rerun()
+        
+        # PRÉCISION
+        if len(st.session_state.gemini_history_predictions) >= 3:
+            st.markdown("---")
+            st.markdown("### 📈 Précision IA")
             
             history_preds = st.session_state.gemini_history_predictions[-10:]
-            actuals = st.session_state.gemini_data[-len(history_preds):]
+            actuals = st.session_state.gemini_data[-len(history_preds):] if len(st.session_state.gemini_data) >= len(history_preds) else []
             
-            correct = sum(1 for p, a in zip(history_preds, actuals) 
-                         if abs(p["prediction"] - a) < 0.5)
-            accuracy = (correct / len(history_preds)) * 100 if history_preds else 0
-            
-            col1, col2, col3 = st.columns(3)
-            col1.metric("📊 Prédictions", f"{len(history_preds)}")
-            col2.metric("✅ Précises", f"{correct}")
-            col3.metric("🎯 Précision", f"{accuracy:.1f}%")
+            if len(actuals) > 0:
+                correct = sum(1 for p, a in zip(history_preds[:-1], actuals[1:]) 
+                             if abs(p["prediction"] - a) < 1.0)
+                total = len(history_preds) - 1
+                accuracy = (correct / total) * 100 if total > 0 else 0
+                
+                col1, col2, col3 = st.columns(3)
+                col1.metric("📊 Vinavina", f"{total}")
+                col2.metric("✅ Marina", f"{correct}")
+                col3.metric("🎯 Précision", f"{accuracy:.1f}%")
         
-        # BOUTONS DE CONTRÔLE
+        # RÉINITIALISATION
         st.markdown("---")
+        st.markdown("### ⚙️ Settings")
+        
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Réinitialiser IA", key="reset_gemini"):
@@ -597,98 +664,62 @@ elif st.session_state.page == "gemini":
                 st.session_state.gemini_initialized = False
                 st.session_state.gemini_predictions = []
                 st.session_state.gemini_history_predictions = []
-                st.success("IA Gemini réinitialisée!")
+                st.success("✅ Réinitialisée!")
                 st.rerun()
         
         with col2:
-            if st.button("📥 Importer plus de data", key="import_more"):
+            if st.button("📥 Hanova ny Historique", key="import_more"):
                 st.session_state.gemini_initialized = False
                 st.rerun()
-        
-        # GUIDE D'UTILISATION
-        with st.expander("📖 Fomba fampiasana ny IA Gemini"):
-            st.markdown("""
-            **🤖 IA Gemini dia paikady manokana:**
-            
-            1. **Voalohany:** Ampidiro ny multiplicateurs 10-20 farany
-            2. **Tsindrio:** "Maminavina ny Tour Manaraka"
-            3. **Mijere:** Ny vinavina + Fiabilité + Zone
-            4. **Aorian'ny tour:** Ampidiro ny vokatra tena nivoaka
-            5. **Avereno:** Maminavina indray
-            
-            **🎯 Tombony:**
-            - Mianatra hatrany ny IA
-            - Vinavina mafonja kokoa rehefa misy data maro
-            - Manaraka ny pattern Bet261 manokana
-            
-            **💡 Torohevitra:**
-            - Milokà raha Fiabilité ≥ 75%
-            - Cash Out amin'ny 85% an'ny vinavina
-            - Mijanona raha very 3 nifanesy
-            """)
 
-# ===== GUIDE (MALAGASY) =====
+# ===== GUIDE =====
 elif st.session_state.page == "guide":
     if st.button("← Hiverina amin'ny Menu"):
         st.session_state.page = "menu"
         st.rerun()
     
-    st.markdown("## 📖 TORO-LALANA FENO - Hampihena ny Risika")
+    st.markdown("## 📖 TORO-LALANA FENO")
     
-    st.markdown("""
-    <div style="background: #ffebee; padding: 15px; border-radius: 10px; margin: 10px 0; border-left: 4px solid #f44336; color: #c62828 !important;">
-        ⚠️ <b>FAMPITANDREMANA LEHIBE:</b><br>
-        Ny Aviator dia lalao kisendrasendra. Tsy misy paikady manome antoka 100%. 
-        Ity toro-lalana ity dia manampy <b>HAMPIHENA NY RISIKA</b>.
-    </div>
-    """, unsafe_allow_html=True)
+    st.error("⚠️ **FAMPITANDREMANA:** Ny Aviator dia lalao kisendrasendra. Tsy misy paikady 100% marina.")
     
     st.markdown("### 1️⃣ Fitsipika Volamena")
     st.markdown("""
     - 🎯 Mametraha **vola voafetra** isan'andro (Max 10,000 Ar)
-    - ❌ **AZA mihoatra MIHITSY** io vola io
-    - 🎯 Zarao ho **loka 20** ny volanao
+    - ❌ **AZA mihoatra MIHITSY**
+    - 🎯 Zarao ho **loka 20**
     - 🛑 **Stop Loss:** Raha very 30% → AJANONY
     - 🎉 **Stop Win:** Raha nahazo 50% → AJANONY
     """)
     
     st.markdown("### 2️⃣ Paikady ho an'ny Vao Manomboka")
-    st.success("""
-    ✅ **Mode Auto 2X Assuré (1.50X)**
-    - Cash Out: 1.50X foana
-    - Win Rate: ~78%
-    - Loka: 3% an'ny bankroll
-    - Tombony tsy mitsahatra
-    """)
+    st.success("✅ **Mode Auto 2X Assuré (1.50X)** - Win Rate ~78%")
     
-    st.markdown("### 3️⃣ Fomba Tsara hampiasana ny IA Gemini")
+    st.markdown("### 3️⃣ Fomba hampiasana ny IA Gemini")
     st.markdown("""
-    1. 📊 **Fijerena:** Mijere loka 10 tsy milalao
-    2. 🤖 **Alefaso ny IA Gemini:** Ampidiro ny data 10-20
-    3. 🎯 **Diniho:** Raha Fiabilité ≥ 80% → CHANCE TSARA
-    4. 💰 **Milokà:** Cash Out amin'ny 85% an'ny vinavina
-    5. ➕ **Avereno:** Ampidiro ny vokatra → mahazo vinavina vaovao
+    1. 📥 **Dingana 1:** Ampidiro ny 20 multiplicateurs voalohany
+    2. ➕ **Dingana 2:** Manampia ny multiplicateur farany
+    3. 🤖 **Dingana 3:** Tsindrio "Maminavina"
+    4. 🔄 **Dingana 4:** Aorian'ny tour, soraty ny tena multiplicateur
+    5. **Avereno** hatrany
     """)
     
     st.markdown("### 4️⃣ FAHADISOANA TSY tokony HATAO")
     st.error("""
-    ❌ **AZA atao MIHITSY:**
     - Manatambatra ny loka rehefa resy
     - Milokà mihoatra ny 10%
     - Mitohy aorian'ny faty 5
-    - Misambo-bola hilalaovana
+    - Misambo-bola
     - Matoky 100% ny Predictor
     """)
     
     st.markdown("### 5️⃣ FAMINTINANA")
     st.markdown("""
     <div style="background: linear-gradient(135deg, #00C853, #009624); 
-                padding: 25px; border-radius: 15px; text-align: center; 
-                color: white !important;">
+                padding: 25px; border-radius: 15px; color: white !important;">
         <h2 style="color: white !important;">📌 5 TENY LEHIBE</h2>
-        <p style="color: white !important; text-align: left; font-size: 16px;">
+        <p style="color: white !important; font-size: 16px;">
         <b>1.</b> Budget VOAFETRA (max 10,000 Ar)<br>
-        <b>2.</b> Loka = 3-5% an'ny bankroll<br>
+        <b>2.</b> Loka = 3-5%<br>
         <b>3.</b> Cash Out 85% an'ny vinavina<br>
         <b>4.</b> Stop Loss -30% / Stop Win +50%<br>
         <b>5.</b> Max 1 ora isan'andro
@@ -701,7 +732,7 @@ elif st.session_state.page == "violette":
     if st.button("← Hiverina"):
         st.session_state.page = "menu"
         st.rerun()
-    st.markdown("## 💜 STRATÉGIE VIOLETTE BET261")
+    st.markdown("## 💜 STRATÉGIE VIOLETTE")
     mult_min = st.number_input("Multiplicateur minimum (X):", 1.00, 2.00, 1.60, 0.01)
     col_h, col_m, col_s = st.columns(3)
     h = col_h.number_input("H", 0, 23, mada_now.hour)
@@ -758,7 +789,7 @@ elif st.session_state.page == "ia":
     if st.button("← Hiverina"):
         st.session_state.page = "menu"
         st.rerun()
-    st.markdown("## 🤖 CALCUL TOUR IA BET261")
+    st.markdown("## 🤖 CALCUL TOUR IA")
     data_input = st.text_area("Multiplicateurs:", "1.5, 2.3, 1.1, 5.6, 1.8, 2.5, 1.3, 1.9, 3.2, 1.4")
     col_h, col_m, col_s = st.columns(3)
     h = col_h.number_input("H", 0, 23, mada_now.hour, key="ia_h")
