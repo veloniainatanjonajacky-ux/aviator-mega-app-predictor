@@ -139,16 +139,6 @@ st.markdown("""
     .step-3 h3 { color: white !important; margin: 0; }
     .step-3 p { color: white !important; margin: 5px 0; }
     
-    .step-4 {
-        background: linear-gradient(135deg, #EA4335, #C62828);
-        padding: 15px;
-        border-radius: 10px;
-        color: white !important;
-        margin-bottom: 15px;
-    }
-    .step-4 h3 { color: white !important; margin: 0; }
-    .step-4 p { color: white !important; margin: 5px 0; }
-    
     .stButton>button {
         background: linear-gradient(135deg, #00C853, #009624);
         color: white !important;
@@ -429,12 +419,13 @@ elif st.session_state.page == "gemini":
     </div>
     """, unsafe_allow_html=True)
     
-    # DINGANA 1: HISTORIQUE 20 VOALOHANY
+    # DINGANA 1: HISTORIQUE 20 VOALOHANY (IHANY)
     if not st.session_state.gemini_initialized:
         st.markdown("""
         <div class="step-1">
             <h3>📥 DINGANA 1: Historique 20 voalohany</h3>
             <p>Ampidiro ny multiplicateur 20 farany nivoaka tao amin'ny Aviator.</p>
+            <p>⚠️ Ity dingana ity dia atao INDRAY MANDEHA fotsiny.</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -467,27 +458,28 @@ elif st.session_state.page == "gemini":
             except Exception as e:
                 st.error(f"❌ Format diso. Ohatra: 1.5, 2.3, 1.1...")
     
-    # MODE CONTINU
+    # MODE CONTINU: DINGANA 2 + 3 (Miverina hatrany)
     else:
         data_count = len(st.session_state.gemini_data)
         
         st.markdown(f"""
         <div class="data-counter">
-            📊 Data tafiditra: <b>{data_count}</b> multiplicateurs
+            📊 Historique tafiditra: <b>{data_count}</b> multiplicateurs<br>
+            <small style="font-size: 13px;">Mitombo hatrany isaky ny manampy ianao</small>
         </div>
         """, unsafe_allow_html=True)
         
-        # Hijery ny historique
-        with st.expander(f"📜 Hijery ny Historique ({data_count} multiplicateurs)"):
+        # HISTORIQUE FENO
+        with st.expander(f"📜 Hijery ny Historique feno ({data_count} multiplicateurs)", expanded=False):
             df_hist = pd.DataFrame({
                 "N°": range(1, len(st.session_state.gemini_data) + 1),
                 "Multiplicateur": [f"{m:.2f}X" for m in st.session_state.gemini_data],
                 "Zone": ["🔴 Mena" if m < 2 else ("🟢 Maitso" if m < 10 else "💎 Big Win") 
                          for m in st.session_state.gemini_data]
             })
-            st.dataframe(df_hist, use_container_width=True, height=300)
+            st.dataframe(df_hist, use_container_width=True, height=400)
         
-        # 10 farany
+        # 10 farany visual
         st.markdown("**🔍 10 farany nivoaka:**")
         last_10 = st.session_state.gemini_data[-10:]
         cols = st.columns(5)
@@ -503,11 +495,11 @@ elif st.session_state.page == "gemini":
         
         st.markdown("---")
         
-        # DINGANA 2: MANAMPIA 1 MULTIPLICATEUR
+        # DINGANA 2: MANAMPIA MULTIPLICATEUR FARANY
         st.markdown("""
         <div class="step-2">
-            <h3>➕ DINGANA 2: Manampia 1 multiplicateur farany</h3>
-            <p>Soraty eto ny multiplicateur farany nivoaka.</p>
+            <h3>➕ DINGANA 2: Manampia multiplicateur farany</h3>
+            <p>Soraty eto ny multiplicateur farany nivoaka tao amin'ny Aviator.</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -524,12 +516,10 @@ elif st.session_state.page == "gemini":
         with col2:
             st.write("")
             st.write("")
-            if st.button("➕ Ampidiro", key="add_mult"):
+            if st.button("➕ Ampidiro", key="add_mult", use_container_width=True):
                 st.session_state.gemini_data.append(new_mult)
-                if len(st.session_state.gemini_data) > 30:
-                    st.session_state.gemini_data = st.session_state.gemini_data[-30:]
                 st.session_state.gemini_predictions = []
-                st.success(f"✅ {new_mult}X voatahiry!")
+                st.success(f"✅ {new_mult}X voatahiry! Historique izao: {len(st.session_state.gemini_data)}")
                 st.rerun()
         
         st.markdown("---")
@@ -590,68 +580,42 @@ elif st.session_state.page == "gemini":
             else:
                 st.error("❌ MAMETRA. Aleo aloha tsy milokà.")
             
-            # DINGANA 4
             st.markdown("---")
-            st.markdown("""
-            <div class="step-4">
-                <h3>🔄 DINGANA 4: Aorian'ny tour</h3>
-                <p>Soraty ny multiplicateur tena nivoaka, dia maminavina indray.</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.info("""
+            🔄 **AVEREO NY DINGANA:**
             
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                actual_mult = st.number_input(
-                    "Multiplicateur tena nivoaka:", 
-                    min_value=1.00, 
-                    max_value=1000.00, 
-                    value=1.50, 
-                    step=0.01,
-                    key="actual_mult"
-                )
-            with col2:
-                st.write("")
-                st.write("")
-                if st.button("➕ Ampio + Maminavina", key="add_and_predict"):
-                    st.session_state.gemini_data.append(actual_mult)
-                    if len(st.session_state.gemini_data) > 30:
-                        st.session_state.gemini_data = st.session_state.gemini_data[-30:]
-                    
-                    diff = abs(pred - actual_mult)
-                    if diff < 0.5:
-                        st.success(f"🎯 Marina! Vinavina: {pred:.2f}X • Tena: {actual_mult}X")
-                    else:
-                        st.warning(f"📊 Vinavina: {pred:.2f}X • Tena: {actual_mult}X")
-                    
-                    pred_new, conf_new, info_new = predict_gemini_next(st.session_state.gemini_data)
-                    if pred_new is not None:
-                        st.session_state.gemini_predictions = [pred_new, conf_new, info_new]
-                        st.session_state.gemini_history_predictions.append({
-                            "prediction": pred_new,
-                            "confidence": conf_new,
-                            "based_on": len(st.session_state.gemini_data)
-                        })
-                    
-                    st.rerun()
+            1. ➕ Aorian'ny tour vita, miverena amin'ny **DINGANA 2** (eo ambony)
+            2. Ampidiro ny multiplicateur tena nivoaka
+            3. 🤖 Tsindrio indray ny **"MAMINAVINA"** ao amin'ny DINGANA 3
+            4. Hahazo vinavina vaovao mafonja kokoa!
+            """)
         
         # PRÉCISION
         if len(st.session_state.gemini_history_predictions) >= 3:
             st.markdown("---")
-            st.markdown("### 📈 Précision IA")
+            st.markdown("### 📈 Précision IA Gemini")
             
             history_preds = st.session_state.gemini_history_predictions[-10:]
-            actuals = st.session_state.gemini_data[-len(history_preds):] if len(st.session_state.gemini_data) >= len(history_preds) else []
             
-            if len(actuals) > 0:
-                correct = sum(1 for p, a in zip(history_preds[:-1], actuals[1:]) 
-                             if abs(p["prediction"] - a) < 1.0)
-                total = len(history_preds) - 1
-                accuracy = (correct / total) * 100 if total > 0 else 0
-                
+            correct = 0
+            total = 0
+            for hp in history_preds[:-1]:
+                pred_val = hp["prediction"]
+                idx_actual = hp["based_on"]
+                if idx_actual < len(st.session_state.gemini_data):
+                    actual = st.session_state.gemini_data[idx_actual]
+                    if abs(pred_val - actual) < 1.0:
+                        correct += 1
+                    total += 1
+            
+            if total > 0:
+                accuracy = (correct / total) * 100
                 col1, col2, col3 = st.columns(3)
-                col1.metric("📊 Vinavina", f"{total}")
+                col1.metric("📊 Vinavina natao", f"{total}")
                 col2.metric("✅ Marina", f"{correct}")
                 col3.metric("🎯 Précision", f"{accuracy:.1f}%")
+            else:
+                st.info("Mbola tsy ampy data hijery ny précision.")
         
         # RÉINITIALISATION
         st.markdown("---")
@@ -659,18 +623,51 @@ elif st.session_state.page == "gemini":
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("🔄 Réinitialiser IA", key="reset_gemini"):
+            if st.button("🔄 Réinitialiser IA Tanteraka", key="reset_gemini", use_container_width=True):
                 st.session_state.gemini_data = []
                 st.session_state.gemini_initialized = False
                 st.session_state.gemini_predictions = []
                 st.session_state.gemini_history_predictions = []
-                st.success("✅ Réinitialisée!")
+                st.success("✅ Réinitialisée! Miverina amin'ny Dingana 1.")
                 st.rerun()
         
         with col2:
-            if st.button("📥 Hanova ny Historique", key="import_more"):
-                st.session_state.gemini_initialized = False
+            if st.button("🗑️ Hofao Vinavina fotsiny", key="clear_pred", use_container_width=True):
+                st.session_state.gemini_predictions = []
+                st.success("✅ Voafafa ny vinavina!")
                 st.rerun()
+        
+        # GUIDE
+        with st.expander("📖 Fomba fampiasana"):
+            st.markdown("""
+            **🤖 IA Gemini - Fizotra:**
+            
+            **📥 Dingana 1: VOALOHANY IHANY**
+            - Ampidiro ny 20 multiplicateurs voalohany
+            - Tsindrio "Tehirizo"
+            
+            **🔄 Avereno hatrany ireto:**
+            
+            **➕ Dingana 2: Aorian'ny tour**
+            - Soraty ny multiplicateur tena nivoaka
+            - Tsindrio "Ampidiro"
+            - Mitombo ny historique (21, 22, 23...)
+            
+            **🤖 Dingana 3: Vinavina**
+            - Tsindrio "MAMINAVINA"
+            - Mahazo vinavina + Fiabilité
+            
+            **🔄 Avereo amin'ny Dingana 2 → 3** isaky ny tour vita
+            
+            **♻️ Réinitialisation:**
+            - "Réinitialiser IA Tanteraka" → Miverina amin'ny Dingana 1
+            - "Hofao Vinavina" → Mamafa ny vinavina ihany
+            
+            **💡 Torohevitra:**
+            - Mihatsara ny vinavina rehefa mitombo ny historique
+            - Milokà raha Fiabilité ≥ 75%
+            - Cash Out amin'ny 85% an'ny vinavina
+            """)
 
 # ===== GUIDE =====
 elif st.session_state.page == "guide":
@@ -696,11 +693,11 @@ elif st.session_state.page == "guide":
     
     st.markdown("### 3️⃣ Fomba hampiasana ny IA Gemini")
     st.markdown("""
-    1. 📥 **Dingana 1:** Ampidiro ny 20 multiplicateurs voalohany
-    2. ➕ **Dingana 2:** Manampia ny multiplicateur farany
+    1. 📥 **Dingana 1:** Ampidiro ny 20 multiplicateurs voalohany (indray mandeha)
+    2. ➕ **Dingana 2:** Manampia ny multiplicateur farany nivoaka
     3. 🤖 **Dingana 3:** Tsindrio "Maminavina"
-    4. 🔄 **Dingana 4:** Aorian'ny tour, soraty ny tena multiplicateur
-    5. **Avereno** hatrany
+    4. 🔄 **Avereo:** Dingana 2 → 3 isaky ny tour vita
+    5. Mihatsara hatrany ny vinavina!
     """)
     
     st.markdown("### 4️⃣ FAHADISOANA TSY tokony HATAO")
@@ -774,7 +771,6 @@ elif st.session_state.page == "tour":
     mi = col_m.number_input("M", 0, 59, mada_now.minute, key="t_m")
     se = col_s.number_input("S", 0, 59, mada_now.second, key="t_s")
     if st.button("🚀 Calculer", key="t_launch"):
-        avg = np.mean(mults)
         ref = mada_now.replace(hour=h, minute=mi, second=se, microsecond=0)
         cumul = 0
         for i in range(1, 6):
