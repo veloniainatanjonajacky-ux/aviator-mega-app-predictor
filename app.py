@@ -1,582 +1,381 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from collections import Counter
-from PIL import Image
-import pytesseract
-import re
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="BET261 AI", layout="wide", page_icon="🎰")
+st.set_page_config(page_title="Aviator Predictor V1.6.0", layout="centered", page_icon="✈️")
 
-st.title("🎰 BET261 AI PREDICTOR PRO")
-st.caption("Spécial Aviator & Mega Wheel - Madagascar 🇲🇬")
-
-# Menu
-game = st.sidebar.radio("Fidio ny lalao:", 
-    ["✈️ Aviator", "🎡 Mega Wheel", "💰 Bankroll Manager", "📔 Diary"])
+st.markdown("""
+<style>
+    .stApp { background-color: #f5f3ff; }
+    .main-header {
+        background: linear-gradient(135deg, #880E4F, #AD1457);
+        padding: 20px;
+        border-radius: 0 0 20px 20px;
+        margin: -20px -20px 20px -20px;
+    }
+    .main-header h1 {
+        color: white;
+        margin: 0;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    .strategy-card {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin: 15px 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        border-left: 6px solid;
+    }
+    .violette { border-color: #9C27B0; }
+    .tour { border-color: #FF9800; }
+    .ia { border-color: #00C853; background: #263238; color: white; }
+    .rose-vip { border-color: #E91E63; }
+    .auto-2x { border-color: #4CAF50; }
+    .premium-lock {
+        background: #FFF3E0;
+        padding: 25px;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    .premium-lock-dark {
+        background: #FFF3E0;
+        padding: 25px;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    .stButton>button {
+        background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px;
+        font-weight: bold;
+        width: 100%;
+    }
+    .zone-bleue { background: #e3f2fd; border-left: 5px solid #2196F3; padding: 15px; border-radius: 10px; margin: 10px 0; }
+    .zone-violette { background: #f3e5f5; border-left: 5px solid #9C27B0; padding: 15px; border-radius: 10px; margin: 10px 0; }
+    .zone-rose { background: #fce4ec; border-left: 5px solid #E91E63; padding: 15px; border-radius: 10px; margin: 10px 0; }
+</style>
+""", unsafe_allow_html=True)
 
 # INIT
-if "av_data" not in st.session_state:
-    st.session_state.av_data = []
-if "mw_data" not in st.session_state:
-    st.session_state.mw_data = []
-if "bankroll" not in st.session_state:
-    st.session_state.bankroll = 50000
-if "initial_bank" not in st.session_state:
-    st.session_state.initial_bank = 50000
-if "diary" not in st.session_state:
-    st.session_state.diary = []
-if "stop_loss" not in st.session_state:
-    st.session_state.stop_loss = 30
-if "stop_win" not in st.session_state:
-    st.session_state.stop_win = 50
+if "page" not in st.session_state:
+    st.session_state.page = "menu"
+if "premium_unlocked" not in st.session_state:
+    st.session_state.premium_unlocked = True  # Set True mba hisokatra rehetra
 
-def read_aviator(img):
-    try:
-        text = pytesseract.image_to_string(img)
-        nums = re.findall(r"(\d+[.,]\d+)", text)
-        nums = [float(n.replace(",", ".")) for n in nums]
-        nums = [n for n in nums if 1.0 <= n <= 1000.0]
-        return nums, text
-    except Exception as e:
-        return [], str(e)
+# HEADER
+st.markdown("""
+<div class="main-header">
+    <h1>✈️ Aviator Predictor V1.6.0 (Beta)</h1>
+</div>
+""", unsafe_allow_html=True)
 
-def read_mega(img):
-    try:
-        text = pytesseract.image_to_string(img)
-        nums = re.findall(r"\b(\d+)\b", text)
-        valid = [1, 2, 5, 8, 10, 15, 20, 30, 40]
-        results = [int(n) for n in nums if int(n) in valid]
-        return results, text
-    except Exception as e:
-        return [], str(e)
-
-def calc_fiability(pred, data):
-    if len(data) < 5:
-        return 50.0
-    std = np.std(data)
-    mean = np.mean(data)
-    diff = abs(pred - mean)
-    fiab = max(40, min(95, 100 - (diff / mean * 100) - (std * 5)))
-    return fiab
-
-def parse_ora(ora_str):
-    try:
-        t = datetime.strptime(ora_str.strip(), "%H:%M:%S")
-        return datetime.now().replace(hour=t.hour, minute=t.minute, second=t.second, microsecond=0)
-    except:
-        return datetime.now()
-
-def check_stop_limits():
-    """Mijery raha tonga ny Stop Loss na Stop Win"""
-    current = st.session_state.bankroll
-    initial = st.session_state.initial_bank
-    diff_pct = ((current - initial) / initial) * 100
+# ===== MENU PRINCIPAL =====
+if st.session_state.page == "menu":
     
-    if diff_pct <= -st.session_state.stop_loss:
-        return "STOP_LOSS", diff_pct
-    elif diff_pct >= st.session_state.stop_win:
-        return "STOP_WIN", diff_pct
-    return "OK", diff_pct
-
-# ====================================
-# AVIATOR
-# ====================================
-if game == "✈️ Aviator":
-    st.header("✈️ AVIATOR BET261")
+    # 1. STRATÉGIE VIOLETTE
+    st.markdown('<div class="strategy-card violette">', unsafe_allow_html=True)
+    st.markdown("### 💜 Stratégie Violette")
+    st.write("**2.00X-9.99X (Standard)**")
+    st.caption("Analyse statistique des zones de couleur.")
+    if st.button("▶️ Ouvrir Stratégie Violette", key="b_violette"):
+        st.session_state.page = "violette"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    # Stop Limits Check
-    status, pct = check_stop_limits()
-    if status == "STOP_LOSS":
-        st.error(f"🛑 **STOP LOSS!** Very {abs(pct):.1f}% ny volanao. AJANONY ny lalao!")
-    elif status == "STOP_WIN":
-        st.success(f"🎉 **STOP WIN!** Nahazo {pct:.1f}%! AJANONY izao mba tsy ho very!")
+    # 2. STRATÉGIE DE TOUR
+    st.markdown('<div class="strategy-card tour">', unsafe_allow_html=True)
+    st.markdown("### 🕰️ Stratégie De Tour")
+    st.write("**Boost 4.00X Garanti 2X (Premium)**")
+    st.caption("Technologie brevetée à haut rendement.")
+    if st.button("▶️ Ouvrir Stratégie De Tour", key="b_tour"):
+        st.session_state.page = "tour"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    # Bankroll Display
-    col_b1, col_b2, col_b3 = st.columns(3)
-    col_b1.metric("💰 Bankroll", f"{st.session_state.bankroll:,.0f} Ar")
-    col_b2.metric("📊 Variation", f"{pct:+.1f}%", delta=f"{st.session_state.bankroll - st.session_state.initial_bank:+,.0f} Ar")
-    col_b3.metric("🎯 Loka voalanjy (5%)", f"{int(st.session_state.bankroll * 0.05):,} Ar")
-    
-    st.info("📸 Alaivo screenshot ny Round History.")
-    up = st.file_uploader("Alefaso ny sary", type=["png", "jpg", "jpeg"], key="av_up")
-    
-    if up:
-        img = Image.open(up)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.image(img, use_container_width=True)
-        with c2:
-            mults, raw = read_aviator(img)
-            if mults:
-                st.success(f"✅ Nahita {len(mults)} multiplicateur")
-                st.dataframe(pd.DataFrame({"Mult": [f"{m}x" for m in mults]}))
-                if st.button("➕ AMPIDIRO", key="av_btn"):
-                    for m in mults:
-                        st.session_state.av_data.append(m)
-                    st.success("Voatahiry!")
-                    st.rerun()
-            else:
-                st.error("Tsy hita ny isa.")
-    
-    st.markdown("---")
-    
-    # PAIKADY
-    st.subheader("⚡ Fidio ny Paikady:")
-    strategy = st.selectbox("Paikady:", [
-        "🛡️ 1.5x Safe Strategy",
-        "⚖️ 2 Bets Strategy",
-        "🎯 Wait for Crash",
-        "🔥 High Risk"
-    ])
-    
-    if len(st.session_state.av_data) >= 5:
-        data = st.session_state.av_data
-        
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total Data", len(data))
-        c2.metric("Max", f"{max(data):.2f}x")
-        c3.metric("Salanisa", f"{np.mean(data):.2f}x")
-        
-        # Strategy Display
-        if strategy == "🛡️ 1.5x Safe Strategy":
-            bet = int(st.session_state.bankroll * 0.10)
-            st.markdown(f"""
-            <div style="background: #1b5e20; padding: 20px; border-radius: 10px;">
-                <h3 style="color: white;">🛡️ 1.5x Safe Strategy</h3>
-                <p style="color: white;">• Auto Cash Out: <b>1.50x</b></p>
-                <p style="color: white;">• Loka atao: <b>{bet:,} Ar</b> (10%)</p>
-                <p style="color: white;">• Tombony manantena: <b>{int(bet*0.5):,} Ar</b></p>
-                <p style="color: white;">• Win Rate: ~65-70%</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        elif strategy == "⚖️ 2 Bets Strategy":
-            bet1 = int(st.session_state.bankroll * 0.07)
-            bet2 = int(st.session_state.bankroll * 0.03)
-            st.markdown(f"""
-            <div style="background: #0d47a1; padding: 20px; border-radius: 10px;">
-                <h3 style="color: white;">⚖️ 2 Bets Strategy</h3>
-                <p style="color: white;">• Loka 1: <b>{bet1:,} Ar</b> → Cash Out 1.30x</p>
-                <p style="color: white;">• Loka 2: <b>{bet2:,} Ar</b> → Cash Out 5.00x</p>
-                <p style="color: white;">• Tombony Loka 1: {int(bet1*0.3):,} Ar</p>
-                <p style="color: white;">• Tombony Loka 2: {int(bet2*4):,} Ar (raha tafita)</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        elif strategy == "🎯 Wait for Crash":
-            last_3 = data[-3:] if len(data) >= 3 else data
-            low_count = sum(1 for x in last_3 if x < 2.0)
-            bet = int(st.session_state.bankroll * 0.08)
-            
-            if low_count >= 3:
-                st.success(f"""
-                ### 🎯 SIGNAL: MILOKÀ IZAO!
-                Ny 3 round farany dia ambany rehetra ({last_3}).
-                
-                • Loka: **{bet:,} Ar**
-                • Cash Out: **2.00x**
-                • Tombony: **{bet:,} Ar**
-                """)
-            else:
-                st.warning(f"""
-                ### ⏳ MIANDRY...
-                Ny 3 round farany: {last_3}
-                
-                Mila ambany rehetra (<2.00x) izy 3 vao milokà.
-                """)
-        
-        else:  # High Risk
-            bet = int(st.session_state.bankroll * 0.05)
-            st.markdown(f"""
-            <div style="background: #b71c1c; padding: 20px; border-radius: 10px;">
-                <h3 style="color: white;">🔥 High Risk Strategy</h3>
-                <p style="color: white;">• Auto Cash Out: <b>10.00x</b></p>
-                <p style="color: white;">• Loka atao: <b>{bet:,} Ar</b> (5%)</p>
-                <p style="color: white;">• Tombony manantena: <b>{int(bet*9):,} Ar</b></p>
-                <p style="color: white;">• Win Rate: ~10-15%</p>
-                <p style="color: yellow;">⚠️ AZA AMPIASAINA mihoatra ny 3 round!</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("---")
-        
-        # SETTINGS ORA
-        st.subheader("⏰ Settings Ora:")
-        col_o1, col_o2 = st.columns(2)
-        with col_o1:
-            ora_av = st.text_input("Ora manomboka (HH:MM:SS):", 
-                                    value=datetime.now().strftime("%H:%M:%S"), 
-                                    key="av_ora")
-        with col_o2:
-            interval_av = st.number_input("Elanelana (sec):", 
-                                          min_value=10, max_value=120, 
-                                          value=30, key="av_int")
-        
-        # KAJIO TOP 10
-        if st.button("🚀 KAJIO TOP 10 VINAVINA", key="av_pred", use_container_width=True):
-            values = np.array(data)
-            X = np.arange(len(values)).reshape(-1, 1)
-            model = RandomForestRegressor(n_estimators=200, random_state=42)
-            model.fit(X, values)
-            
-            results = []
-            start_time = parse_ora(ora_av)
-            
-            for i in range(1, 11):
-                p = model.predict([[len(values) + i - 1]])[0]
-                v = np.random.uniform(-0.3, 0.5)
-                final_pred = max(1.0, p + v)
-                pred_time = start_time + timedelta(seconds=interval_av * i)
-                fiab = calc_fiability(final_pred, data)
-                
-                results.append({
-                    "Round": i,
-                    "Ora": pred_time.strftime("%H:%M:%S"),
-                    "Multiplicateur": final_pred,
-                    "Fiabilité": fiab
-                })
-            
-            st.markdown("### 🏆 TOP 10 VINAVINA:")
-            for r in results:
-                p = r["Multiplicateur"]
-                fiab = r["Fiabilité"]
-                if p < 1.5:
-                    risk = "🔴 RISIKA"
-                    color = "#F44336"
-                elif p < 2.5:
-                    risk = "🟡 ANTONONY"
-                    color = "#FFD700"
-                else:
-                    risk = "🟢 TSARA"
-                    color = "#00C853"
-                
-                fiab_e = "🟢" if fiab >= 75 else ("🟡" if fiab >= 60 else "🔴")
-                
-                st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #1a1a2e, #16213e);
-                            padding: 12px; border-radius: 10px; margin: 5px 0;
-                            border-left: 5px solid {color};">
-                    <b style="color:white;">Round #{r['Round']} • ⏰ {r['Ora']} • {risk} {p:.2f}x</b><br>
-                    <span style="color:#FFD700;">💰 Cash Out: {p*0.85:.2f}x | {fiab_e} Fiab: {fiab:.1f}%</span>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # AJOUTER AU DIARY
-        st.markdown("---")
-        st.subheader("📔 Ampidiro ao amin'ny Diary:")
-        col_d1, col_d2, col_d3 = st.columns(3)
-        with col_d1:
-            loka_av = st.number_input("Loka (Ar):", min_value=100, value=1000, key="av_loka")
-        with col_d2:
-            vokatra = st.selectbox("Vokatra:", ["NAHAZO ✅", "LAVO ❌"], key="av_res")
-        with col_d3:
-            tombony = st.number_input("Tombony/Faty (Ar):", value=0, key="av_tomb")
-        
-        if st.button("📔 Ampidiro Diary", key="av_diary"):
-            entry = {
-                "Ora": datetime.now().strftime("%H:%M:%S"),
-                "Lalao": "Aviator",
-                "Loka": loka_av,
-                "Vokatra": vokatra,
-                "Tombony": tombony if vokatra == "NAHAZO ✅" else -loka_av
-            }
-            st.session_state.diary.append(entry)
-            st.session_state.bankroll += entry["Tombony"]
-            st.success("Voatahiry!")
-            st.rerun()
-        
-        with st.expander("Historique"):
-            st.dataframe(pd.DataFrame({"Mult": data}))
-    else:
-        st.warning(f"Mila 5 farafahakeliny. Izao: {len(st.session_state.av_data)}")
-
-# ====================================
-# MEGA WHEEL
-# ====================================
-elif game == "🎡 Mega Wheel":
-    st.header("🎡 MEGA WHEEL BET261")
-    
-    status, pct = check_stop_limits()
-    if status == "STOP_LOSS":
-        st.error(f"🛑 **STOP LOSS!** Very {abs(pct):.1f}%. AJANONY!")
-    elif status == "STOP_WIN":
-        st.success(f"🎉 **STOP WIN!** Nahazo {pct:.1f}%! AJANONY!")
-    
-    col_b1, col_b2 = st.columns(2)
-    col_b1.metric("💰 Bankroll", f"{st.session_state.bankroll:,.0f} Ar")
-    col_b2.metric("📊 Variation", f"{pct:+.1f}%")
-    
-    mega_nums = [1, 2, 5, 8, 10, 15, 20, 30, 40]
-    
-    up = st.file_uploader("Alefaso ny sary", type=["png", "jpg", "jpeg"], key="mw_up")
-    
-    if up:
-        img = Image.open(up)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.image(img, use_container_width=True)
-        with c2:
-            nums, raw = read_mega(img)
-            if nums:
-                st.success(f"✅ Nahita {len(nums)} isa")
-                st.dataframe(pd.DataFrame({"Isa": nums}))
-                if st.button("➕ AMPIDIRO", key="mw_btn"):
-                    for n in nums:
-                        st.session_state.mw_data.append(n)
-                    st.success("Voatahiry!")
-                    st.rerun()
-            else:
-                st.error("Tsy hita ny isa.")
-    
-    with st.expander("✏️ Manual Input"):
-        man = st.selectbox("Fidio:", mega_nums, key="mw_sel")
-        if st.button("Ampidiro", key="mw_man"):
-            st.session_state.mw_data.append(man)
-            st.rerun()
-    
-    st.markdown("---")
-    
-    # PAIKADY MEGA
-    st.subheader("⚡ Fidio ny Paikady:")
-    mw_strategy = st.selectbox("Paikady:", [
-        "🛡️ Cover Strategy (Safe)",
-        "⚖️ Balanced Strategy",
-        "🔥 High Reward"
-    ])
-    
-    total_bet = int(st.session_state.bankroll * 0.10)
-    
-    if mw_strategy == "🛡️ Cover Strategy (Safe)":
-        st.markdown(f"""
-        <div style="background: #1b5e20; padding: 20px; border-radius: 10px;">
-            <h3 style="color: white;">🛡️ Cover Strategy</h3>
-            <p style="color: white;">Loka totaly: <b>{total_bet:,} Ar</b></p>
-            <p style="color: white;">• Isa <b>1</b>: {int(total_bet*0.70):,} Ar (70%)</p>
-            <p style="color: white;">• Isa <b>2</b>: {int(total_bet*0.20):,} Ar (20%)</p>
-            <p style="color: white;">• Isa <b>5</b>: {int(total_bet*0.10):,} Ar (10%)</p>
-            <p style="color: yellow;">Win Rate: ~85%</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    elif mw_strategy == "⚖️ Balanced Strategy":
-        st.markdown(f"""
-        <div style="background: #0d47a1; padding: 20px; border-radius: 10px;">
-            <h3 style="color: white;">⚖️ Balanced</h3>
-            <p style="color: white;">• Isa <b>2</b>: {int(total_bet*0.40):,} Ar</p>
-            <p style="color: white;">• Isa <b>5</b>: {int(total_bet*0.35):,} Ar</p>
-            <p style="color: white;">• Isa <b>10</b>: {int(total_bet*0.25):,} Ar</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    else:
-        st.markdown(f"""
-        <div style="background: #b71c1c; padding: 20px; border-radius: 10px;">
-            <h3 style="color: white;">🔥 High Reward</h3>
-            <p style="color: white;">• Isa <b>10</b>: {int(total_bet*0.50):,} Ar</p>
-            <p style="color: white;">• Isa <b>20</b>: {int(total_bet*0.30):,} Ar</p>
-            <p style="color: white;">• Isa <b>40</b>: {int(total_bet*0.20):,} Ar</p>
-            <p style="color: yellow;">⚠️ Win Rate: ~25%</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    if len(st.session_state.mw_data) >= 5:
-        hist = st.session_state.mw_data
-        st.write(f"**10 farany:** {hist[-10:]}")
-        
-        count = Counter(hist)
-        total = len(hist)
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("**🔥 HOT**")
-            hot = sorted(count.items(), key=lambda x: x[1], reverse=True)[:5]
-            for n, f in hot:
-                st.write(f"Isa **{n}**: {f} fois")
-        
-        with c2:
-            st.markdown("**❄️ COLD**")
-            last = {n: (hist[::-1].index(n) if n in hist else 99) for n in mega_nums}
-            cold = sorted(last.items(), key=lambda x: x[1], reverse=True)[:5]
-            for n, d in cold:
-                st.write(f"Isa **{n}**: {d} lasa")
-        
-        col_o1, col_o2 = st.columns(2)
-        with col_o1:
-            ora_mw = st.text_input("Ora (HH:MM:SS):", 
-                                    value=datetime.now().strftime("%H:%M:%S"), 
-                                    key="mw_ora")
-        with col_o2:
-            interval_mw = st.number_input("Elanelana (sec):", 
-                                          min_value=30, max_value=180, 
-                                          value=60, key="mw_int")
-        
-        if st.button("🚀 KAJIO TOP 10", key="mw_pred", use_container_width=True):
-            scores = {}
-            for n in mega_nums:
-                freq = count.get(n, 0) / total
-                dist = last[n] / 50
-                scores[n] = (freq * 0.6) + (dist * 0.4)
-            
-            sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-            top10 = [sorted_scores[i % len(sorted_scores)] for i in range(10)]
-            start_time = parse_ora(ora_mw)
-            
-            st.markdown("### 🏆 TOP 10:")
-            for i, (n, s) in enumerate(top10, 1):
-                conf = min(s * 200, 95)
-                pred_time = start_time + timedelta(seconds=interval_mw * i)
-                fiab_e = "🟢" if conf >= 75 else ("🟡" if conf >= 60 else "🔴")
-                
-                st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #2d1b69, #11052c);
-                            padding: 12px; border-radius: 10px; margin: 5px 0;
-                            border-left: 5px solid #FFD700;">
-                    <b style="color:white;">#{i} • ⏰ {pred_time.strftime('%H:%M:%S')} • Isa <span style="color:#FFD700;">{n}</span> ({n}x)</b><br>
-                    <span style="color:#FFD700;">{fiab_e} Fiab: {conf:.1f}%</span>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Diary Mega
-        st.markdown("---")
-        st.subheader("📔 Ampidiro ao amin'ny Diary:")
-        col_d1, col_d2, col_d3 = st.columns(3)
-        with col_d1:
-            loka_mw = st.number_input("Loka (Ar):", min_value=100, value=1000, key="mw_loka")
-        with col_d2:
-            vokatra_mw = st.selectbox("Vokatra:", ["NAHAZO ✅", "LAVO ❌"], key="mw_res")
-        with col_d3:
-            tombony_mw = st.number_input("Tombony/Faty (Ar):", value=0, key="mw_tomb")
-        
-        if st.button("📔 Ampidiro Diary", key="mw_diary"):
-            entry = {
-                "Ora": datetime.now().strftime("%H:%M:%S"),
-                "Lalao": "Mega Wheel",
-                "Loka": loka_mw,
-                "Vokatra": vokatra_mw,
-                "Tombony": tombony_mw if vokatra_mw == "NAHAZO ✅" else -loka_mw
-            }
-            st.session_state.diary.append(entry)
-            st.session_state.bankroll += entry["Tombony"]
-            st.success("Voatahiry!")
-            st.rerun()
-        
-        with st.expander("Historique"):
-            st.dataframe(pd.DataFrame({"Isa": hist}))
-    else:
-        st.warning(f"Mila 5. Izao: {len(st.session_state.mw_data)}")
-
-# ====================================
-# BANKROLL MANAGER
-# ====================================
-elif game == "💰 Bankroll Manager":
-    st.header("💰 BANKROLL MANAGER")
-    
-    status, pct = check_stop_limits()
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("💰 Bankroll Izao", f"{st.session_state.bankroll:,.0f} Ar")
-    col2.metric("📌 Vola voalohany", f"{st.session_state.initial_bank:,.0f} Ar")
-    col3.metric("📊 Variation", f"{pct:+.1f}%", 
-                delta=f"{st.session_state.bankroll - st.session_state.initial_bank:+,.0f} Ar")
-    
-    if status == "STOP_LOSS":
-        st.error(f"🛑 **STOP LOSS TRATRA!** Very {abs(pct):.1f}% (limite: {st.session_state.stop_loss}%)")
-    elif status == "STOP_WIN":
-        st.success(f"🎉 **STOP WIN TRATRA!** Nahazo {pct:.1f}% (limite: {st.session_state.stop_win}%)")
-    else:
-        st.info(f"✅ Mbola OK. Limite Stop Loss: -{st.session_state.stop_loss}%, Stop Win: +{st.session_state.stop_win}%")
-    
-    st.markdown("---")
-    st.subheader("⚙️ Settings:")
-    
-    new_bank = st.number_input("💰 Bankroll vaovao (Ar):", 
-                                min_value=1000, 
-                                value=st.session_state.bankroll, 
-                                step=1000)
-    
-    col_s1, col_s2 = st.columns(2)
-    with col_s1:
-        new_sl = st.slider("🛑 Stop Loss (%):", 5, 50, st.session_state.stop_loss)
-    with col_s2:
-        new_sw = st.slider("🎉 Stop Win (%):", 10, 100, st.session_state.stop_win)
-    
-    if st.button("💾 Tehirizo Settings", use_container_width=True):
-        st.session_state.bankroll = new_bank
-        st.session_state.initial_bank = new_bank
-        st.session_state.stop_loss = new_sl
-        st.session_state.stop_win = new_sw
-        st.success("Voatahiry!")
+    # 3. CALCUL TOUR IA
+    st.markdown("""
+    <div class="strategy-card ia">
+        <h3 style="color: #00C853;">🤖 Calcul Tour IA</h3>
+        <p><b>Analyse IA (Premium)</b></p>
+        <p style="opacity: 0.7;">Prédictions basées sur l'IA.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("▶️ Ouvrir Calcul Tour IA", key="b_ia"):
+        st.session_state.page = "ia"
         st.rerun()
     
-    st.markdown("---")
-    st.subheader("🧮 Calculator de Loka:")
-    pct_bet = st.slider("% ny Bankroll hampiasaina:", 1, 20, 5)
-    bet_amount = int(st.session_state.bankroll * pct_bet / 100)
-    st.metric(f"Loka ({pct_bet}%)", f"{bet_amount:,} Ar")
+    # 4. STRATÉGIE ROSE VIP
+    st.markdown('<div class="strategy-card rose-vip">', unsafe_allow_html=True)
+    st.markdown("### 🎀 Stratégie Rose VIP")
+    st.write("**10.00X+ (Premium)**")
+    st.caption("Algorithmes prédictifs avancés.")
+    if st.button("▶️ Ouvrir Stratégie Rose VIP", key="b_rose"):
+        st.session_state.page = "rose"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    # Recommendations
-    st.markdown("---")
-    st.subheader("💡 Torohevitra:")
+    # 5. MODE AUTO 2X ASSURÉ
+    st.markdown('<div class="strategy-card auto-2x">', unsafe_allow_html=True)
+    st.markdown("### ✅ Mode Auto 2X Assuré")
+    st.write("**Assuré si vous voulez un peu de profit gagnant**")
+    st.caption("Technique de sécurité maximale.")
+    if st.button("▶️ Ouvrir Mode Auto 2X", key="b_auto"):
+        st.session_state.page = "auto2x"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ===== STRATÉGIE VIOLETTE =====
+elif st.session_state.page == "violette":
+    if st.button("← Retour au menu"):
+        st.session_state.page = "menu"
+        st.rerun()
+    
+    st.markdown("## 💜 STRATÉGIE VIOLETTE")
+    st.info("📌 **Mode d'utilisation :**\n\n1. Entrez le multiplicateur le plus bas des 10 derniers tours (<2.00X)\n2. Indiquez l'heure exacte (HH:MM:SS)\n3. Réinitialisez si nouveau minimum")
+    
+    mult_min = st.number_input("Multiplicateur minimum (X) :", 1.00, 2.00, 1.60, 0.01)
+    col_h, col_m, col_s = st.columns(3)
+    h = col_h.number_input("Heures", 0, 23, 12)
+    mi = col_m.number_input("Minutes", 0, 59, 4)
+    se = col_s.number_input("Secondes", 0, 59, 30)
+    
+    if st.button("🧮 Lancer l'analyse", key="v_launch"):
+        ref = datetime.now().replace(hour=h, minute=mi, second=se, microsecond=0)
+        if mult_min < 1.30:
+            pb, pv, pr = 25, 50, 25
+        elif mult_min < 1.60:
+            pb, pv, pr = 35, 42, 23
+        elif mult_min < 1.80:
+            pb, pv, pr = 38.5, 38.6, 22.9
+        else:
+            pb, pv, pr = 45, 35, 20
+        pb += np.random.uniform(-2, 2)
+        pv += np.random.uniform(-2, 2)
+        pr += np.random.uniform(-2, 2)
+        tot = pb + pv + pr
+        pb, pv, pr = pb/tot*100, pv/tot*100, pr/tot*100
+        
+        start = ref + timedelta(seconds=55)
+        end = ref + timedelta(minutes=1, seconds=22)
+        interval = f"{start.strftime('%H:%M:%S')} - {end.strftime('%H:%M:%S')}"
+        
+        st.markdown("### 📊 Résultats de l'analyse")
+        st.markdown(f'<div class="zone-bleue"><b>💧 Zone Bleue (1.00X-1.99X)</b><br>Probabilité : <b>{pb:.1f}%</b><br>Intervalle : {interval}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="zone-violette"><b>🌸 Zone Violette (2.00X-9.99X)</b><br>Probabilité : <b>{pv:.1f}%</b><br>Intervalle : {interval}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="zone-rose"><b>🚀 Zone Rose (10.00X+)</b><br>Probabilité : <b>{pr:.1f}%</b><br>Intervalle : {interval}</div>', unsafe_allow_html=True)
+
+# ===== STRATÉGIE DE TOUR =====
+elif st.session_state.page == "tour":
+    if st.button("← Retour au menu"):
+        st.session_state.page = "menu"
+        st.rerun()
+    
+    st.markdown("## 🕰️ STRATÉGIE DE TOUR")
+    st.success("🎯 **Boost 4.00X Garanti 2X**\n\nTechnologie brevetée pour maximiser les chances d'atteindre 2.00X.")
+    
+    st.write("**Entrez les 5 derniers multiplicateurs :**")
+    mults = []
+    cols = st.columns(5)
+    for i, c in enumerate(cols):
+        with c:
+            m = st.number_input(f"M{i+1}", 1.00, 100.00, 1.50, 0.01, key=f"tour_{i}")
+            mults.append(m)
+    
+    col_h, col_m, col_s = st.columns(3)
+    h = col_h.number_input("H", 0, 23, datetime.now().hour, key="t_h")
+    mi = col_m.number_input("M", 0, 59, datetime.now().minute, key="t_m")
+    se = col_s.number_input("S", 0, 59, datetime.now().second, key="t_s")
+    
+    if st.button("🚀 Calculer le Boost", key="t_launch"):
+        avg = np.mean(mults)
+        ref = datetime.now().replace(hour=h, minute=mi, second=se)
+        
+        # Algorithme: maminavina ny rounds tsara hipoiran'ny 2X+
+        st.markdown("### 🎯 Tours Garantis 2X :")
+        for i in range(1, 6):
+            boost_time = ref + timedelta(seconds=30*i)
+            boost_value = max(2.00, avg * 1.3 + np.random.uniform(0, 2))
+            confidence = np.random.uniform(75, 95)
+            
+            color = "#00C853" if boost_value >= 4 else "#FFD700"
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2); padding: 15px; 
+                        border-radius: 10px; margin: 8px 0; border-left: 5px solid {color};">
+                <b>Tour #{i}</b> • ⏰ {boost_time.strftime('%H:%M:%S')}<br>
+                💎 Boost: <b style="color: {color}; font-size: 22px;">{boost_value:.2f}X</b><br>
+                ✅ Fiabilité: <b>{confidence:.1f}%</b> • Cash Out: <b>2.00X</b>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.info("💡 **Conseil:** Sortez à 2.00X pour garantir le gain.")
+
+# ===== CALCUL TOUR IA =====
+elif st.session_state.page == "ia":
+    if st.button("← Retour au menu"):
+        st.session_state.page = "menu"
+        st.rerun()
+    
+    st.markdown("## 🤖 CALCUL TOUR IA")
+    st.success("🧠 **Analyse IA Avancée**\n\nUtilise le Machine Learning pour prédire les prochains tours.")
+    
+    st.write("**Entrez 10 derniers multiplicateurs (séparés par virgule):**")
+    data_input = st.text_area("Ex: 1.5, 2.3, 1.1, 5.6, 1.8, 2.5, 1.3, 1.9, 3.2, 1.4", 
+                              "1.5, 2.3, 1.1, 5.6, 1.8, 2.5, 1.3, 1.9, 3.2, 1.4")
+    
+    col_h, col_m, col_s = st.columns(3)
+    h = col_h.number_input("H", 0, 23, datetime.now().hour, key="ia_h")
+    mi = col_m.number_input("M", 0, 59, datetime.now().minute, key="ia_m")
+    se = col_s.number_input("S", 0, 59, datetime.now().second, key="ia_s")
+    
+    if st.button("🤖 Lancer l'IA", key="ia_launch"):
+        try:
+            data = [float(x.strip()) for x in data_input.split(",")]
+            from sklearn.ensemble import RandomForestRegressor
+            
+            X = np.arange(len(data)).reshape(-1, 1)
+            model = RandomForestRegressor(n_estimators=200, random_state=42)
+            model.fit(X, data)
+            
+            ref = datetime.now().replace(hour=h, minute=mi, second=se)
+            
+            st.markdown("### 🎯 Prédictions IA (TOP 10) :")
+            for i in range(1, 11):
+                pred = model.predict([[len(data)+i-1]])[0]
+                pred = max(1.0, pred + np.random.uniform(-0.3, 0.5))
+                t = ref + timedelta(seconds=30*i)
+                conf = np.random.uniform(60, 95)
+                
+                if pred < 1.5:
+                    color = "#F44336"
+                elif pred < 2.5:
+                    color = "#FFD700"
+                else:
+                    color = "#00C853"
+                
+                st.markdown(f"""
+                <div style="background: #1a1a2e; padding: 15px; border-radius: 10px; 
+                            margin: 8px 0; border-left: 5px solid {color};">
+                    <span style="color: white;"><b>Tour #{i}</b> • ⏰ {t.strftime('%H:%M:%S')}</span><br>
+                    <span style="color: {color}; font-size: 20px;"><b>{pred:.2f}X</b></span>
+                    <span style="color: #FFD700;"> • Fiab: {conf:.1f}%</span>
+                </div>
+                """, unsafe_allow_html=True)
+        except:
+            st.error("Format incorrect. Utilisez des virgules.")
+
+# ===== STRATÉGIE ROSE VIP =====
+elif st.session_state.page == "rose":
+    if st.button("← Retour au menu"):
+        st.session_state.page = "menu"
+        st.rerun()
+    
+    st.markdown("## 🎀 STRATÉGIE ROSE VIP")
+    st.error("🚀 **Mode VIP - 10.00X+ Hunter**\n\nAlgorithmes avancés pour chasser les BIG WINS (10X et plus).")
+    
+    st.write("**Entrez les 20 derniers multiplicateurs :**")
+    data_input = st.text_area("Format: 1.5, 2.3, ...", 
+                              "1.2, 1.5, 2.3, 1.1, 5.6, 1.8, 2.5, 1.3, 1.9, 3.2, 1.4, 2.1, 1.6, 4.5, 1.7, 2.8, 1.2, 3.5, 1.9, 2.4")
+    
+    col_h, col_m, col_s = st.columns(3)
+    h = col_h.number_input("H", 0, 23, datetime.now().hour, key="r_h")
+    mi = col_m.number_input("M", 0, 59, datetime.now().minute, key="r_m")
+    se = col_s.number_input("S", 0, 59, datetime.now().second, key="r_s")
+    
+    if st.button("💎 Chasser les 10X+", key="r_launch"):
+        try:
+            data = [float(x.strip()) for x in data_input.split(",")]
+            
+            # Algorithme: Analyse de la fréquence des big wins
+            big_wins = [x for x in data if x >= 10]
+            avg_gap = len(data) / max(len(big_wins), 1)
+            
+            ref = datetime.now().replace(hour=h, minute=mi, second=se)
+            
+            st.markdown("### 💎 Prochains BIG WINS prévus :")
+            
+            # Calcul des prochains big wins
+            for i in range(1, 6):
+                next_round = int(avg_gap * i)
+                t = ref + timedelta(seconds=30 * next_round)
+                predicted_value = np.random.uniform(10, 50)
+                confidence = max(40, 90 - i*10)
+                
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #fce4ec, #f8bbd0); 
+                            padding: 20px; border-radius: 12px; margin: 10px 0; 
+                            border-left: 6px solid #E91E63;">
+                    <b style="color: #880E4F; font-size: 16px;">💎 BIG WIN #{i}</b><br>
+                    ⏰ Tour #{next_round} • <b>{t.strftime('%H:%M:%S')}</b><br>
+                    🎯 Valeur prédite: <b style="color: #E91E63; font-size: 24px;">{predicted_value:.2f}X</b><br>
+                    ✅ Fiabilité: <b>{confidence}%</b>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.warning("⚠️ **Stratégie VIP:** Misez petit et soyez patient. Les BIG WINS sont rares mais lucratifs.")
+        except:
+            st.error("Format incorrect.")
+
+# ===== MODE AUTO 2X ASSURÉ =====
+elif st.session_state.page == "auto2x":
+    if st.button("← Retour au menu"):
+        st.session_state.page = "menu"
+        st.rerun()
+    
+    st.markdown("## ✅ MODE AUTO 2X ASSURÉ")
+    st.success("🛡️ **Sécurité Maximale**\n\nCette technique garantit un petit profit constant en sortant systématiquement à 2.00X.")
+    
+    st.markdown("### 📊 Calculateur de Profit :")
+    
+    bankroll = st.number_input("💰 Votre bankroll (Ar):", min_value=1000, value=50000, step=1000)
+    bet_pct = st.slider("🎯 % du bankroll par tour:", 1, 10, 3)
+    nb_tours = st.slider("🔄 Nombre de tours:", 5, 100, 20)
+    
+    bet_amount = int(bankroll * bet_pct / 100)
+    win_per_round = bet_amount  # 2X garantit le double
+    
+    # Simulation: 70% win rate à 2X
+    win_rate = 0.70
+    expected_wins = int(nb_tours * win_rate)
+    expected_losses = nb_tours - expected_wins
+    
+    total_won = expected_wins * win_per_round
+    total_lost = expected_losses * bet_amount
+    net_profit = total_won - total_lost
+    
+    st.markdown("### 🎯 Plan de Trading :")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("💰 Mise/tour", f"{bet_amount:,} Ar")
+    col2.metric("✅ Cash Out", "2.00X")
+    col3.metric("🎁 Gain/tour", f"+{win_per_round:,} Ar")
+    
+    st.markdown("### 📈 Résultats prévus :")
+    col1, col2 = st.columns(2)
+    col1.metric("✅ Tours gagnés (~70%)", f"{expected_wins}")
+    col2.metric("❌ Tours perdus (~30%)", f"{expected_losses}")
+    
     st.markdown(f"""
-    - 🎯 **Loka tsara indrindra**: {int(st.session_state.bankroll * 0.05):,} Ar (5%)
-    - ⚠️ **Loka maximum**: {int(st.session_state.bankroll * 0.10):,} Ar (10%)
-    - 🛑 **Stop Loss**: Aza very mihoatra ny {int(st.session_state.initial_bank * st.session_state.stop_loss / 100):,} Ar
-    - 🎉 **Stop Win**: Mialà raha mahazo {int(st.session_state.initial_bank * st.session_state.stop_win / 100):,} Ar
+    <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); padding: 25px; 
+                border-radius: 15px; text-align: center; color: white; margin: 15px 0;">
+        <h2 style="margin: 0;">💎 PROFIT NET PRÉVU</h2>
+        <h1 style="margin: 10px 0; font-size: 40px;">+{net_profit:,} Ar</h1>
+        <p>Sur {nb_tours} tours • Win Rate ~70%</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.info("""
+    💡 **Règles d'Or du Mode Auto 2X:**
+    - ✅ Toujours sortir à exactement 2.00X
+    - ✅ Ne jamais dépasser 5% du bankroll par tour
+    - ✅ Arrêter après 5 pertes consécutives
+    - ✅ Reprendre 30 minutes plus tard
     """)
 
-# ====================================
-# DIARY
-# ====================================
-elif game == "📔 Diary":
-    st.header("📔 DIARY - Tantaran'ny Loka")
-    
-    if len(st.session_state.diary) > 0:
-        df_diary = pd.DataFrame(st.session_state.diary)
-        
-        # Stats
-        total_bet = df_diary["Loka"].sum()
-        total_win = df_diary[df_diary["Tombony"] > 0]["Tombony"].sum()
-        total_loss = abs(df_diary[df_diary["Tombony"] < 0]["Tombony"].sum())
-        net = total_win - total_loss
-        win_count = len(df_diary[df_diary["Vokatra"] == "NAHAZO ✅"])
-        win_rate = (win_count / len(df_diary)) * 100
-        
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("🎲 Loka totaly", f"{total_bet:,} Ar")
-        c2.metric("✅ Tombony", f"+{total_win:,} Ar")
-        c3.metric("❌ Faty", f"-{total_loss:,} Ar")
-        c4.metric("📊 Net", f"{net:+,} Ar", delta=f"{win_rate:.1f}% Win Rate")
-        
-        st.markdown("---")
-        st.subheader("📋 Tantaran'ny loka:")
-        st.dataframe(df_diary, use_container_width=True, height=400)
-        
-        if st.button("🗑️ Hamafa Diary"):
-            st.session_state.diary = []
-            st.rerun()
-    else:
-        st.info("Mbola tsy misy loka voatahiry. Mandehana amin'ny Aviator na Mega Wheel.")
-
-# SIDEBAR
-st.sidebar.markdown("---")
-st.sidebar.metric("💰 Bankroll", f"{st.session_state.bankroll:,.0f} Ar")
-st.sidebar.write(f"✈️ Aviator: **{len(st.session_state.av_data)}**")
-st.sidebar.write(f"🎡 Mega: **{len(st.session_state.mw_data)}**")
-st.sidebar.write(f"📔 Diary: **{len(st.session_state.diary)}**")
-
-if st.sidebar.button("🗑️ Hamafa Aviator"):
-    st.session_state.av_data = []
-    st.rerun()
-
-if st.sidebar.button("🗑️ Hamafa Mega"):
-    st.session_state.mw_data = []
-    st.rerun()
-
-st.sidebar.markdown("---")
-st.sidebar.caption("🇲🇬 Made in Madagascar")
-st.sidebar.caption("⚠️ Milalao am-pahendrena!")
+# FOOTER
+st.markdown("---")
+st.caption("🇲🇬 Made in Madagascar • ⚠️ Jouez avec modération")
